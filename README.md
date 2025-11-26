@@ -1,274 +1,174 @@
-🖨️ Sistema de Controle de Impressora Fiscal
-(README com explicação detalhada do código, principalmente a parte da DLL e JNA)
+# 🖨️ Sistema de Controle de Impressora Fiscal
 
-Este projeto implementa um sistema de controle para impressoras fiscais usando Java e a biblioteca JNA (Java Native Access).
-O JNA permite que o Java converse diretamente com uma DLL, ou seja, com funções nativas escritas em C.
+Este sistema foi desenvolvido em Java e utiliza o JNA (Java Native Access) para conversar diretamente com um arquivo especial chamado DLL, que é o responsável por controlar a impressora fiscal.
 
-O sistema funciona totalmente via terminal, oferecendo funções como impressões, abertura de gaveta e emissão de sinal sonoro.
+A DLL contém todas as funções nativas que realmente enviam comandos para a impressora: abrir conexão, imprimir, abrir gaveta, etc.
+O papel do Java é somente chamar essas funções.
 
-🎯 OBJETIVO DESTE README
+O sistema funciona totalmente pelo terminal (a tela preta) e permite fazer impressões, abrir gavetas e emitir sons.
+O objetivo é ser um sistema simples, direto e educativo.
 
-Este README foi reescrito especialmente para:
+---
 
-✔️ explicar com detalhes como o código se conecta à DLL
-✔️ explicar como o JNA funciona no seu projeto
-✔️ mostrar como cada etapa do código conversa com a impressora
-✔️ explicar como a DLL é carregada e usada até o fim da execução
+## 📋 Funcionalidades
 
-🛠️ Tecnologias Utilizadas
+A seguir, tudo o que o sistema consegue fazer:
 
-Java 11+
+## 🖨️ Funções de Impressão
 
-JNA (Java Native Access) — para acesso à DLL
+### 🖨️ Funções de Impressão
+- **Imprimir textos comuns** (como recibos)
+- **Imprimir QR Codes**
+- **Imprimir códigos de barras**
+- **Imprimir um arquivo XML SAT**
+- **Imprimir um arquivo XML de cancelamento SAT**
 
-DLL da impressora: E1_Impressora01.dll
+Esses XMLs são arquivos que a impressora fiscal entende para realizar uma venda ou cancelar uma venda.
 
-Scanner (entrada pelo teclado)
+---
+### 🎛️ Controles da Impressora
 
-🔌 COMO FUNCIONA O ACESSO À DLL
+- Abrir a gaveta padrão
 
-Esta é a parte mais importante do sistema.
+- Abrir a gaveta Elgin
 
-📥 1. O download da DLL
+- Emitir sinal sonoro
 
-A DLL não é baixada automaticamente pelo programa.
-Você precisa colocar manualmente a DLL no computador — normalmente fornecida pelo fabricante.
+---
 
-No seu código, a DLL está localizada neste caminho:
+### 🔧 Conexão da Impressora
 
-"C:\\Users\\Usuario\\Desktop\\UNASP\\UNASP\\Java-Aluno ensino-medio\\Java-Aluno EM\\Java-Aluno EM\\E1_Impressora01.dll"
+O sistema permite configurar a forma de conexão com a impressora
 
+Abrir a conexão
 
-⚠️ Esse caminho é fixo.
-Se a DLL for movida, o programa para de funcionar.
-O ideal seria usar "./lib/E1_Impressora01.dll", mas seu código está funcionando assim.
+Fechar a conexão
 
-🧩 2. Como o JNA carrega a DLL
+---
 
-No topo do seu código existe esta interface:
-
-public interface ImpressoraDLL extends Library {
-
-
-Essa interface declara todos os métodos nativos presentes na DLL.
-
-E aqui acontece a magia:
-
-ImpressoraDLL INSTANCE = (ImpressoraDLL) Native.load(
-        "C:\\Users\\Usuario\\Desktop\\UNASP\\UNASP\\Java-Aluno ensino-medio\\Java-Aluno EM\\Java-Aluno EM\\E1_Impressora01.dll",
-        ImpressoraDLL.class
-);
-
-O que essa linha faz:
-
-Carrega a DLL na memória
-
-Associa cada método Java a um método real da DLL
-
-Cria um objeto pronto para uso chamado INSTANCE
-
-Daqui em diante, tudo que você chama assim:
-
-ImpressoraDLL.INSTANCE.ImpressaoTexto(...)
-
-
-na verdade está chamando uma função C dentro da DLL.
-
-📞 3. Mapeamento dos métodos da DLL
-
-Na interface, você declarou métodos como:
-
-int AbreConexaoImpressora(int tipo, String modelo, String conexao, int param);
-int ImpressaoTexto(String dados, int posicao, int estilo, int tamanho);
-int ImprimeXMLSAT(String dados, int param);
-
-
-Cada método:
-
-existe na DLL
-
-retorna um código (0 = sucesso, outros números = erro)
-
-segue exatamente a mesma assinatura do C
-
-Se a assinatura estiver errada → o programa trava.
-
-🔗 4. Como o Java chama cada função da DLL
-🔌 Exemplo — Abrir Conexão
-int retorno = ImpressoraDLL.INSTANCE.AbreConexaoImpressora(tipo, modelo, conexao, parametro);
-
-
-A DLL tenta abrir a porta USB/serial indicada.
-
-Se o retorno for:
-
-0 → conexão aberta
-
-outro número → erro
-
-🖨️ Exemplo — Imprimir Texto
-int retorno = ImpressoraDLL.INSTANCE.ImpressaoTexto("Teste de impressao", 1, 4, 0);
-
-
-A DLL recebe:
-
-texto
-
-posição
-
-estilo
-
-tamanho
-
-E imprime na impressora sem que o Java precise saber como isso funciona.
-
-📄 Exemplo — Imprimir XML SAT
-int retorno = ImpressoraDLL.INSTANCE.ImprimeXMLSAT("path=C:\\...\\XMLSAT.xml", 0);
-
-
-Esse método manda o caminho do XML para a DLL, e ela interpreta o conteúdo.
-
-📚 EXPLICAÇÃO DO FUNCIONAMENTO DO PROGRAMA (INÍCIO → FIM)
-
-Aqui está uma explicação completa da execução do sistema:
-
-1️⃣ O programa inicia
-
-O main() exibe o menu em loop infinito.
-
-2️⃣ O usuário escolhe uma opção
-
-Exemplo:
-
-2 - Abrir Conexao
-
-3️⃣ Se for abrir conexão → chama a DLL
-ImpressoraDLL.INSTANCE.AbreConexaoImpressora(...)
-
-
-Se sucesso → variável conexaoAberta = true.
-
-4️⃣ Ao chamar qualquer impressão
-
-O programa faz:
-
-Verifica se a conexão está aberta
-
-Chama a função correspondente da DLL
-
-Exibe sucesso ou erro
-
-Opcionalmente corta o papel depois da impressão
-
-5️⃣ A DLL executa a função na impressora
-
-Tudo que é complexo (protocolo USB, comandos ESC/POS, etc.) a DLL faz automaticamente.
-
-O Java não imprime nada — ele apenas envia comandos via DLL.
-
-6️⃣ Quando o usuário escolhe "0"
-FechaConexaoImpressora();
-
-
-A DLL fecha a porta USB/serial e libera os recursos da impressora.
-
-O programa encerra.
-
-📁 Estrutura Recomendada do Projeto
-projeto/
-├── src/
-│   └── Main.java
-├── lib/
-│   ├── jna.jar
-│   └── E1_Impressora01.dll
-└── xml/
-    ├── XMLSAT.xml
-    └── CANC_SAT.xml
-
-▶️ Como Executar
-
-Compile:
-
-javac -cp "jna.jar" Main.java
-
-
-Execute:
-
-java -cp ".;jna.jar" Main
-
-🧪 Testando a Impressora
-
-Abra conexão → envie um comando → veja se imprime.
-
-🛑 Erros Comuns Explicados
-❗ DLL não encontrada
-
-Caminho errado ou DLL incompatível (32/64 bits).
-
-❗ Impressão não funciona
-
-Conexão configurada errado.
-
-❗ XML não imprime
-
-Caminho precisa começar com "path=".
-
-👥 Desenvolvedores
-
-Ana Luiza Barea
-Beatriz Firmado
-Giovanna Totte
-Guilherme Totte
-
-📜 Licença
-
-Uso educacional. A DLL pertence ao fabricante.
-
-✔️ Quer que eu gere a versão Markdown formatada automaticamente?
-
-Posso gerar um arquivo README.md pronto, totalmente formatado, com emojis, tabelas e links. Basta pedir:
-
-👉 "Gerar README.md final"
-
-Você disse:
-SIM
-O ChatGPT disse:
-
-Aqui está o README.md FINAL, totalmente formatado em Markdown, organizado, profissional e pronto para colocar no GitHub.
-Inclui toda a explicação detalhada da DLL, JNA, carregamento, funcionamento interno e fluxo completo do programa, conforme você pediu.
-
-Você pode copiar EXATAMENTE este conteúdo e salvar como:
-
-📄 README.md
-
-🖨️ Sistema de Controle de Impressora Fiscal
-(Documentação completa com explicação detalhada da DLL e JNA)
-
-Este projeto implementa um sistema de controle para impressoras fiscais usando Java + JNA (Java Native Access) para acessar funções nativas presentes em uma DLL fornecida pelo fabricante da impressora.
-Ele permite enviar comandos como imprimir textos, QR Codes, XML SAT, além de abrir gavetas e emitir sinais sonoros.
-
-O sistema funciona totalmente no terminal e tem como objetivo ser didático, simples e funcional.
-
-📌 Objetivo da Documentação
-
-Este README foi preparado especialmente para:
-
-✔️ Explicar como a DLL é usada pelo código
-✔️ Mostrar como o JNA carrega e conecta a DLL ao Java
-✔️ Demonstrar o fluxo completo do programa
-✔️ Ajudar novos usuários a entenderem como a impressora fiscal está sendo controlada
-
-🧰 Tecnologias utilizadas
+### 🛠️ Tecnologias Utilizadas
 
 Java 11 ou superior
 
-JNA (Java Native Access)
+JNA (Java Native Access) — responsável por acessar a DLL
 
-DLL do fabricante: E1_Impressora01.dll
+DLL: E1_Impressora01.dll — arquivo que controla a impressora
 
-Scanner (Java) — entrada de dados do usuário
+Scanner (entrada pelo teclado) — para ler o que o usuário digita
 
-📂 Estrutura recomendada do projeto
+--- 
+
+## 🔌 COMO O CÓDIGO USA A DLL
+
+Essa é a parte mais importante do sistema. Aqui está o que o seu código faz por trás dos panos.
+
+### 📥 1. Carregando a DLL através do JNA
+
+Logo no início do código existe a criação de uma interface:
+
+public interface ImpressoraDLL extends Library {
+
+
+Essa interface representa a DLL dentro do Java.
+
+E a DLL é carregada assim:
+
+ImpressoraDLL INSTANCE = (ImpressoraDLL) Native.load(
+    "C:\\...\\E1_Impressora01.dll",
+    ImpressoraDLL.class
+);
+
+O que acontece aqui:
+
+O JNA carrega a DLL na memória
+
+Lê os métodos dentro dela
+
+Cria o objeto INSTANCE
+→ Esse objeto permite chamar funções da DLL como se fosse Java
+
+Exemplo:
+
+ImpressoraDLL.INSTANCE.ImpressaoTexto(...);
+
+
+Isso chama diretamente código nativo.
+
+### 🔗 2. Mapeando os métodos da DLL
+
+Dentro da interface você tem vários métodos como:
+
+int AbreConexaoImpressora(int tipo, String modelo, String conexao, int param);
+int ImpressaoTexto(String dados, int posicao, int estilo, int tamanho);
+int ImprimeXMLSAT(String dados, int param);
+
+
+Esses métodos precisam ter exatamente a mesma assinatura dos métodos na DLL original.
+Se estiver diferente → o programa trava.
+
+### 📞 3. Como o Java chama a DLL no código
+
+O Java NÃO imprime nada sozinho.
+Ele apenas pede para a DLL fazer.
+
+Exemplo: abrir conexão
+int retorno = ImpressoraDLL.INSTANCE.AbreConexaoImpressora(tipo, modelo, conexao, parametro);
+
+Exemplo: imprimir texto
+ImpressoraDLL.INSTANCE.ImpressaoTexto("Teste de impressao", 1, 4, 0);
+
+Exemplo: imprimir XML SAT
+ImpressoraDLL.INSTANCE.ImprimeXMLSAT("path=C:\\...\\XMLSAT.xml", 0);
+
+### 🔁 4. Fluxo completo do uso da DLL durante o programa
+
+Usuário configura a conexão
+
+O sistema chama a DLL para abrir a conexão
+
+O usuário escolhe o tipo de impressão
+
+O Java repassa o comando para a DLL
+
+texto
+
+QR Code
+
+código de barras
+
+XML SAT
+
+XML Cancelamento
+
+A DLL faz:
+
+enviar comandos de impressão
+
+movimentar cabeçote
+
+abrir gaveta
+
+emitir som
+
+O Java mostra o resultado no terminal
+
+Quando o usuário sai, o Java chama:
+
+FechaConexaoImpressora();
+
+---
+
+## 📁 Arquivos Necessários
+Arquivo	Para que serve
+E1_Impressora01.dll	É o arquivo principal que permite o Java conversar com a impressora
+XMLSAT.xml	Arquivo para imprimir uma venda SAT
+CANC_SAT.xml	Arquivo para imprimir um cancelamento SAT
+
+---
+## 📂 Estrutura Sugerida do Projeto
+
+Para manter tudo organizado, você pode deixar os arquivos assim:
+
 projeto/
 ├── src/
 │   └── Main.java
@@ -279,170 +179,25 @@ projeto/
     ├── XMLSAT.xml
     └── CANC_SAT.xml
 
-🔌 Funcionamento da DLL + JNA (explicação completa)
 
-Esta é a parte mais importante do sistema.
+Cada pasta tem seu propósito:
 
-📥 1. A DLL
+src → onde fica o código
 
-A DLL não é baixada automaticamente.
-Você deve colocá-la manualmente na pasta do projeto.
+lib → bibliotecas externas
 
-No código, o caminho usado é:
+xml → arquivos XML para impressão
 
-"C:\\Users\\Usuario\\Desktop\\UNASP\\UNASP\\Java-Aluno ensino-medio\\Java-Aluno EM\\Java-Aluno EM\\E1_Impressora01.dll"
+---
 
+## 🚀 Como Executar
+1. Compilar o código
+javac -cp "jna.jar" Main.java
 
-⚠️ A DLL só funciona se estiver exatamente nesse caminho.
-Recomenda-se mover para ./lib/ e ajustar o caminho no código.
+2. Rodar o programa
+java -cp ".;jna.jar" Main
 
-🧩 2. Carregando a DLL com JNA
-
-A interface abaixo declara todos os métodos que existem na DLL:
-
-public interface ImpressoraDLL extends Library {
-
-
-E aqui a DLL é carregada:
-
-ImpressoraDLL INSTANCE = (ImpressoraDLL) Native.load(
-        "C:\\...\\E1_Impressora01.dll",
-        ImpressoraDLL.class
-);
-
-O que o JNA faz aqui:
-
-Carrega a DLL na memória
-
-Liga cada método Java ao método real do C
-
-Cria um objeto acessível como:
-
-ImpressoraDLL.INSTANCE
-
-
-Isso permite chamar funções da DLL como se fossem Java:
-
-ImpressoraDLL.INSTANCE.ImpressaoTexto(...);
-
-🔗 3. Métodos da DLL usados pelo Java
-
-A interface mapeia todos os métodos da DLL, por exemplo:
-
-int AbreConexaoImpressora(int tipo, String modelo, String conexao, int param);
-int ImpressaoTexto(String dados, int posicao, int estilo, int tamanho);
-int ImprimeXMLSAT(String dados, int param);
-int AbreGavetaElgin();
-int SinalSonoro(int qtd, int tempoInicio, int tempoFim);
-
-
-Cada método:
-
-retorna 0 → sucesso
-
-retorna outro número → erro da impressora
-
-As assinaturas devem ser idênticas à DLL C, senão o programa trava.
-
-🧠 4. Como o programa chama a DLL internamente
-🔌 Abrir conexão
-ImpressoraDLL.INSTANCE.AbreConexaoImpressora(tipo, modelo, conexao, parametro);
-
-🖨️ Imprimir texto
-ImpressoraDLL.INSTANCE.ImpressaoTexto("Teste", 1, 4, 0);
-
-📄 Imprimir XML SAT
-ImpressoraDLL.INSTANCE.ImprimeXMLSAT("path=C:\\...\\XMLSAT.xml", 0);
-
-💵 Abrir gaveta
-ImpressoraDLL.INSTANCE.AbreGaveta(1, 5, 10);
-
-🔊 Emitir sinal sonoro
-ImpressoraDLL.INSTANCE.SinalSonoro(4, 5, 5);
-
-📟 Fluxo Completo do Programa (início → fim)
-1️⃣ Usuário abre o terminal
-
-O main() exibe o menu em um loop infinito.
-
-2️⃣ Usuario escolhe uma opção
-
-Exemplo:
-
-2 - Abrir Conexao
-
-3️⃣ O Java chama a DLL
-
-O método da interface JNA é executado.
-
-4️⃣ A DLL conversa com a impressora
-
-Ela faz:
-
-abrir porta USB/serial,
-
-enviar comandos ESC/POS,
-
-interpretar XML,
-
-emitir som, etc.
-
-5️⃣ Java recebe o retorno
-
-Se 0 → OK
-Se erro → mostra o código no terminal.
-
-6️⃣ Ao encerrar
-
-A função da DLL é chamada:
-
-FechaConexaoImpressora();
-
-
-E o programa termina.
-
-📋 Funcionalidades do Sistema
-🖨️ Impressões
-
-Texto
-
-QR Code
-
-Código de barras
-
-XML SAT
-
-XML de cancelamento SAT
-
-🎛️ Controles
-
-Abrir gaveta padrão
-
-Abrir gaveta Elgin
-
-Emitir sinal sonoro
-
-Cortar papel
-
-🔧 Conexão
-
-Configurar porta/modelo
-
-Abrir conexão
-
-Fechar conexão
-
-▶️ Como executar o sistema
-1. Compilar
-javac -cp "lib/jna.jar" src/Main.java
-
-2. Executar
-java -cp "lib/jna.jar;src" Main
-
-
-(Em Linux/Mac: usar : ao invés de ;)
-
-🧩 Menu disponível
+## 📟 Menu do Programa
 1 - Configurar Conexao
 2 - Abrir Conexao
 3 - Impressao Texto
@@ -455,12 +210,34 @@ java -cp "lib/jna.jar;src" Main
 10 - Sinal Sonoro
 0 - Fechar Conexao e Sair
 
-🛑 Solução de Problemas
+
+Você só precisa digitar o número desejado.
+
+
+---
+
+## 🔧 Métodos da DLL utilizados
+int AbreConexaoImpressora(int tipo, String modelo, String conexao, int param);
+int FechaConexaoImpressora();
+
+int ImpressaoTexto(String texto, int posicao, int estilo, int tamanho);
+int ImpressaoQRCode(String dados, int tamanho, int nivel);
+int ImpressaoCodigoBarras(String dados, int tipo, int altura, int largura);
+
+int ImprimeXMLSAT(String caminho);
+int ImprimeXMLCancelamentoSAT(String caminho);
+
+int AbreGaveta();
+int AbreGavetaElgin();
+int AcionaSinalSonoro(int qtde, int intensidade, int duracao);
+
+
+---
+
+## 🧩 Solução de Problemas
 ❗ DLL não encontrada
 
-O caminho está errado
-
-A DLL foi movida
+Caminho errado
 
 Arquitetura errada (32/64 bits)
 
@@ -468,32 +245,32 @@ Arquitetura errada (32/64 bits)
 
 Porta incorreta
 
-USB desconectado
-
-Outro programa usando a impressora
+Cabo USB desconectado
 
 ❗ XML não imprime
 
-Caminho não começa com path=
+Caminho precisa começar com path=
 
 XML mal formatado
 
-Modelo da impressora não suporta
 
-👥 Desenvolvedores
+---
+
+## 👥 Desenvolvedores
 
 Ana Luiza Barea
-
 Beatriz Firmado
-
 Giovanna Totte
-
 Guilherme Totte
 
-📜 Licença
 
-Projeto acadêmico — DLL pertence ao fabricante da impressora.
+---
 
-⭐ Dê uma estrela ⭐
+## 📜 Licença
 
-Se este projeto te ajudou, deixe uma estrela no repositório!
+Este projeto foi desenvolvido apenas para fins educacionais.
+A DLL utilizada pertence ao fabricante da impressora.
+
+---
+
+## ⭐ Se este projeto te ajudou, deixe uma estrela no repositório!
